@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{{ .Title}}</title>
+    </head>
+    <body>
+        <h1>{{ .Title}}</h1>
+        <ul>
+            {{range .Content}}
+                <li>
+                    <div> <b>ID = </b>{{ .Id }} </div>
+                    <div> <b>Firstname: </b>{{ .Firstname }} </div>    
+                    <div> <b>Lastname: </b> {{ .Lastname }} </div>    
+                    <div> <b>Summary mark: </b> {{ .Sum }} </div>                        
+                    <div> <b>Count of participations:</b> {{ .Teamcount }} </div>
+                    <div> <b>Avarage Mark: </b> {{.AvarageMark}} </div>
+                 	<hr>
+                </li>
+            {{end}}
+        </ul>
+    </body>
+</html>
