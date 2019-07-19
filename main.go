@@ -1,22 +1,21 @@
 package main
 
 import (
-	"database/sql"
+	_"database/sql"
+	"github.com/jmoiron/sqlx"
 	"fmt"
 	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
+	_"github.com/lib/pq"
 	"log"
 	"net/http"
-	//"github.com/subosito/gotenv"
 	"knock-knock/controllers"
 	"knock-knock/driver"
-	"knock-knock/models"
-	//_"knock-knock/repository"
-	_ "os"
+	_"knock-knock/models"
+	"os"
+	"github.com/gorilla/handlers"
 )
 
-var users []models.User
-var db *sql.DB
+
 
 /*type ViewDataUsers struct {
 	Title   string `json:"title"`
@@ -33,11 +32,9 @@ func logFatal(err error) {
 	}
 }
 
+
 func main() {
-	/* pgURL,err := pq.ParseURL(os.Getenv("POSTGRESQL_URL"))
-	   logFatal(err)
-	   log.Println(pgURL)*/
-	//http.HandleFunc("/signin", Signin)
+	var db *sqlx.DB
 	controller := controllers.Controller{}
 	db = driver.ConnectDB()
 	router := mux.NewRouter()
@@ -45,6 +42,9 @@ func main() {
 	router.HandleFunc("/signin", controller.Signin(db)).Methods("POST")
 	router.HandleFunc("/users", controller.GetUsers(db)).Methods("GET")
 	router.HandleFunc("/users/{id}", controller.GetUser(db)).Methods("GET")
+	router.HandleFunc("/logout",controller.Logout()).Methods("POST")
 	fmt.Println("Server is listening...")
-	http.ListenAndServe(":8181", router)
+
+	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
+	log.Fatal(http.ListenAndServe(":8181", loggedRouter))
 }
