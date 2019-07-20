@@ -1,20 +1,27 @@
 package controllers
 
 import (
-	"fmt"
 	_ "database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/subosito/gotenv"
 	"golang.org/x/crypto/bcrypt"
 	_ "html/template"
 	"knock-knock/models"
 	"knock-knock/repository/user"
 	"log"
 	"net/http"
+	//"os"
+	"regexp"
 	"strconv"
 )
+
+/*func init() {
+	gotenv.Load()
+}*/
 
 var users []models.User
 
@@ -26,26 +33,45 @@ func logFatal(err error) {
 	}
 }
 
-var (
-	// key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
-	key   = []byte("super-secret-key")
-	store = sessions.NewCookieStore(key)
-)
+var store = sessions.NewCookieStore([]byte("secret-key"))
 
-func secret(w http.ResponseWriter, r *http.Request) {
-	session, _ := store.Get(r, "cookie-name")
+func (c Controller) GetMyPage(db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, _ := store.Get(r, "cookie-name")
+		session.Options.MaxAge = 300
+		w.Header().Set("Content-Type", "application/json")
+		userCheckingID := getUserSession(session)
+		var userIsFound bool
+		var user models.User
+		//fmt.Println("aaa")
 
-	// Check if user is authenticated
-	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return
+		//fmt.Println(userCheckingID.(int))
+		userRepo := userRepository.UserRepository{}
+		if userCheckingID != 0 {
+			json.NewEncoder(w).Encode(userCheckingID)
+			user, userIsFound = userRepo.GetUser(db, user, userCheckingID)
+			fmt.Println(user)
+			if userIsFound {
+				json.NewEncoder(w).Encode(user)
+				return
+			}
+		}
+		//	session.Values["authenticated"] = true
+		w.WriteHeader(http.StatusBadRequest)
+		//json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d",userChecking.Id))
+		//json.NewEncoder(w).Encode(userChecking.Id)
 	}
-
-	// Print secret message
-	///fmt.Fprintln(w, "The cake is a lie!")
 }
-func (c Controller) GetUsers(db *sqlx.DB) http.HandlerFunc {
 
+func getUserSession(s *sessions.Session) int {
+	userID, ok := s.Values["id"].(int)
+	if !ok {
+		return 0
+	}
+	return userID
+}
+
+func (c Controller) GetUsers(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "cookie-name")
 
@@ -120,7 +146,6 @@ func (c Controller) GetUser(db *sqlx.DB) http.HandlerFunc {
 		tmpl.Execute(w, data)*/
 	}
 }
-
 func (c Controller) Signup(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var user models.User
@@ -132,23 +157,36 @@ func (c Controller) Signup(db *sqlx.DB) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
-		user.Password = string(hashedPassword)
-		userRepo := userRepository.UserRepository{}
-		userID = userRepo.Signup(db, user)
-		json.NewEncoder(w).Encode(&userID)
+		nameOK := checkName(user)
+		if nameOK {
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
+			logFatal(err)
+			user.Password = string(hashedPassword)
+			userRepo := userRepository.UserRepository{}
+			userID = userRepo.Signup(db, user)
+			json.NewEncoder(w).Encode(&userID)
+			return
+		}
+		http.Error(w, "Wrong firstname or lastname!", http.StatusForbidden)
 	}
 }
+
+func checkName(user models.User) bool {
+	matchedFirstname, err := regexp.MatchString(`^[a-zA-Z0-9_а-яА-Я \-]*$`, user.Firstname)
+	logFatal(err)
+	matchedLastname, err := regexp.MatchString(`^[a-zA-Z0-9_а-яА-Я \-]*$`, user.Lastname)
+	return matchedLastname && matchedFirstname
+}
+
 func (c Controller) Logout() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("aasdadsa")
 		session, _ := store.Get(r, "cookie-name")
-		
 		session.Options.MaxAge = -1
 		err := session.Save(r, w)
 		if err != nil {
 			logFatal(err)
 		}
+
 		json.NewEncoder(w).Encode("logged out!")
 	}
 }
@@ -170,10 +208,12 @@ func (c Controller) Signin(db *sqlx.DB) http.HandlerFunc { //как отлавл
 				//json.NewEncoder(w).Encode()
 				return
 			}
+			//	session.Values["authenticated"] = true
 			session.Values["authenticated"] = true
+			session.Values["id"] = userChecking.Id
 			session.Save(r, w)
-			json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d",userChecking.Id))
-			//json.NewEncoder(w).Encode(userChecking.Id)
+			json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d", userChecking.Id))
+
 		}
 	}
 }

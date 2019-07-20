@@ -16,7 +16,7 @@ func logFatal(err error) {
 }
 
 func (u UserRepository) GetUsers(db *sqlx.DB) ([]models.User, error) { //ддобавить сканер интерфейс для юзера чтобы считать среднее арифметическое
-	rows, err := db.Query("select * from teammate")
+	rows, err := db.Query("select id_user, firstname, lastname, summarymark, teamcount  from teammate")
 	users := []models.User{}
 	logFatal(err)
 	defer rows.Close()
@@ -34,8 +34,8 @@ func (u UserRepository) GetUsers(db *sqlx.DB) ([]models.User, error) { //ддо�
 }
 
 func (u UserRepository) GetUser(db *sqlx.DB, user models.User, id int) (models.User, bool) {
-	row := db.QueryRowx("select * from teammate where id_user = $1", id)
-	err := row.StructScan(&user) ///func (r *Row) StructScan(dest interface{}) error (sqlx)
+	row := db.QueryRowx("select id_user, firstname, lastname, summarymark, teamcount from teammate where id_user = $1", id)
+	err := row.StructScan(&user)
 	if err == sql.ErrNoRows {
 		return models.User{}, false
 	}

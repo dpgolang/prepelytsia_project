@@ -1,21 +1,19 @@
 package main
 
 import (
-	_"database/sql"
-	"github.com/jmoiron/sqlx"
+	_ "database/sql"
 	"fmt"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	_"github.com/lib/pq"
-	"log"
-	"net/http"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"knock-knock/controllers"
 	"knock-knock/driver"
-	_"knock-knock/models"
+	_ "knock-knock/models"
+	"log"
+	"net/http"
 	"os"
-	"github.com/gorilla/handlers"
 )
-
-
 
 /*type ViewDataUsers struct {
 	Title   string `json:"title"`
@@ -32,7 +30,6 @@ func logFatal(err error) {
 	}
 }
 
-
 func main() {
 	var db *sqlx.DB
 	controller := controllers.Controller{}
@@ -42,7 +39,9 @@ func main() {
 	router.HandleFunc("/signin", controller.Signin(db)).Methods("POST")
 	router.HandleFunc("/users", controller.GetUsers(db)).Methods("GET")
 	router.HandleFunc("/users/{id}", controller.GetUser(db)).Methods("GET")
-	router.HandleFunc("/logout",controller.Logout()).Methods("POST")
+	router.HandleFunc("/logout", controller.Logout()).Methods("POST")
+	router.HandleFunc("/mypage", controller.GetMyPage(db)).Methods("GET")
+
 	fmt.Println("Server is listening...")
 
 	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
