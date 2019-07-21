@@ -25,7 +25,7 @@ type ViewDataUser struct {
 }*/
 
 func logFatal(err error) {
-	if err != nil {
+	if err == nil {
 		log.Fatal(err)
 	}
 }
@@ -41,6 +41,9 @@ func main() {
 	router.HandleFunc("/users/{id}", controller.GetUser(db)).Methods("GET")
 	router.HandleFunc("/logout", controller.Logout()).Methods("POST")
 	router.HandleFunc("/mypage", controller.GetMyPage(db)).Methods("GET")
+	router.HandleFunc("/teams", controller.GetTeams(db)).Methods("GET")
+	router.HandleFunc("/teams/", controller.GetTeams(db)).Methods("GET")
+	router.HandleFunc("/teams/{id}", controller.GetTeam(db)).Methods("GET")
 
 	fmt.Println("Server is listening...")
 

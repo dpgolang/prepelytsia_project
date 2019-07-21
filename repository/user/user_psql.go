@@ -15,21 +15,19 @@ func logFatal(err error) {
 	}
 }
 
-func (u UserRepository) GetUsers(db *sqlx.DB) ([]models.User, error) { //ддобавить сканер интерфейс для юзера чтобы считать среднее арифметическое
+func (u UserRepository) GetUsers(db *sqlx.DB) ([]models.User, error) {
 	rows, err := db.Query("select id_user, firstname, lastname, summarymark, teamcount  from teammate")
 	users := []models.User{}
 	logFatal(err)
 	defer rows.Close()
-	for rows.Next() {
-		err := sqlx.StructScan(rows, &users)
-		if err != nil {
-			return []models.User{}, err
-		}
+	err := sqlx.StructScan(rows, &users)
+	if err != nil {
+		return []models.User{}, err
 	}
 	//users.CalculateAvarageMark()
-	/*for i := range users {
+	for i := range users {
 		users[i].CalculateAvarageMark()
-	}*/
+	}
 	return users, nil
 }
 

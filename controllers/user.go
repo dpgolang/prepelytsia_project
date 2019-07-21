@@ -23,7 +23,7 @@ import (
 	gotenv.Load()
 }*/
 
-var users []models.User
+//var users []models.User
 
 type Controller struct{}
 
@@ -33,19 +33,18 @@ func logFatal(err error) {
 	}
 }
 
+//куда лучше вставить эту строчку? как подгрузить из env
 var store = sessions.NewCookieStore([]byte("secret-key"))
 
 func (c Controller) GetMyPage(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "cookie-name")
-		session.Options.MaxAge = 300
 		w.Header().Set("Content-Type", "application/json")
 		userCheckingID := getUserSession(session)
-		var userIsFound bool
-		var user models.User
-		//fmt.Println("aaa")
-
-		//fmt.Println(userCheckingID.(int))
+		var (
+			userIsFound bool
+			user        models.User
+		)
 		userRepo := userRepository.UserRepository{}
 		if userCheckingID != 0 {
 			json.NewEncoder(w).Encode(userCheckingID)
@@ -57,7 +56,7 @@ func (c Controller) GetMyPage(db *sqlx.DB) http.HandlerFunc {
 			}
 		}
 		//	session.Values["authenticated"] = true
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "You should sign in to check this page", http.StatusForbidden)
 		//json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d",userChecking.Id))
 		//json.NewEncoder(w).Encode(userChecking.Id)
 	}
@@ -74,10 +73,8 @@ func getUserSession(s *sessions.Session) int {
 func (c Controller) GetUsers(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "cookie-name")
-
-		// Check if user is authenticated
 		if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-			http.Error(w, "Forbidden", http.StatusForbidden)
+			http.Error(w, "You should sign in to check this page", http.StatusForbidden)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -102,10 +99,8 @@ func (c Controller) GetUser(db *sqlx.DB) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "cookie-name")
-
-		// Check if user is authenticated
 		if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-			http.Error(w, "Forbidden", http.StatusForbidden)
+			http.Error(w, "You should sign in to check this page", http.StatusForbidden)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -148,8 +143,10 @@ func (c Controller) GetUser(db *sqlx.DB) http.HandlerFunc {
 }
 func (c Controller) Signup(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var user models.User
-		var userID int
+		var (
+			user   models.User
+			userID int
+		)
 		w.Header().Set("Content-Type", "application/json")
 		err := json.NewDecoder(r.Body).Decode(&user)
 		logFatal(err)
@@ -204,16 +201,16 @@ func (c Controller) Signin(db *sqlx.DB) http.HandlerFunc { //как отлавл
 		userFromBase.Password, userIsFound = userRepo.Signin(db, userChecking, userFromBase)
 		if userIsFound {
 			if err = bcrypt.CompareHashAndPassword([]byte(userFromBase.Password), []byte(userChecking.Password)); err != nil {
-				w.WriteHeader(http.StatusUnauthorized)
-				//json.NewEncoder(w).Encode()
+				http.Error(w, "Wrong password!", http.StatusUnauthorized)
 				return
 			}
-			//	session.Values["authenticated"] = true
 			session.Values["authenticated"] = true
 			session.Values["id"] = userChecking.Id
 			session.Save(r, w)
 			json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d", userChecking.Id))
-
+		} else {
+			http.Error(w, "Wrong ID!", http.StatusUnauthorized)
+			return
 		}
 	}
 }
