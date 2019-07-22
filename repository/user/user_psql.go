@@ -9,18 +9,18 @@ import (
 
 type UserRepository struct{}
 
-func logFatal(err error) {
+func logErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 }
 
 func (u UserRepository) GetUsers(db *sqlx.DB) ([]models.User, error) {
 	rows, err := db.Query("select id_user, firstname, lastname, summarymark, teamcount  from teammate")
 	users := []models.User{}
-	logFatal(err)
+	logErr(err)
 	defer rows.Close()
-	err := sqlx.StructScan(rows, &users)
+	err = sqlx.StructScan(rows, &users)
 	if err != nil {
 		return []models.User{}, err
 	}
@@ -31,28 +31,28 @@ func (u UserRepository) GetUsers(db *sqlx.DB) ([]models.User, error) {
 	return users, nil
 }
 
-func (u UserRepository) GetUser(db *sqlx.DB, user models.User, id int) (models.User, bool) {
+func (u UserRepository) GetUser(db *sqlx.DB, user models.User, id int) (models.User, error) {
 	row := db.QueryRowx("select id_user, firstname, lastname, summarymark, teamcount from teammate where id_user = $1", id)
 	err := row.StructScan(&user)
 	if err == sql.ErrNoRows {
-		return models.User{}, false
+		return models.User{}, err
 	}
-	logFatal(err)
+	logErr(err)
 	user.CalculateAvarageMark()
-	return user, true
+	return user, err
 }
 
 func (u UserRepository) Signup(db *sqlx.DB, user models.User) int {
 	err := db.QueryRow("insert into teammate (firstname,lastname,password) values ($1,$2,$3) RETURNING id_user;",
-		user.Firstname, user.Lastname, user.Password).Scan(&user.Id)
-	logFatal(err)
-	return user.Id
+		user.Firstname, user.Lastname, user.Password).Scan(&user.IDuser)
+	logErr(err)
+	return user.IDuser
 }
-func (u UserRepository) Signin(db *sqlx.DB, userСhecking models.User, userFromBase models.User) (string, bool) {
-	err := db.QueryRow("select password from teammate where id_user=$1", userСhecking.Id).Scan(&userFromBase.Password) //вернуть
+func (u UserRepository) Signin(db *sqlx.DB, userСhecking models.User, userFromBase models.User) (string, error) {
+	err := db.QueryRow("select password from teammate where id_user=$1", userСhecking.IDuser).Scan(&userFromBase.Password)
 	if err == sql.ErrNoRows {
-		return "", false
+		return "", err
 	}
-	logFatal(err)
-	return userFromBase.Password, true
+	logErr(err)
+	return userFromBase.Password, nil
 }

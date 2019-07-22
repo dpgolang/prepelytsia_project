@@ -9,16 +9,16 @@ import (
 
 type TeamRepository struct{}
 
-func logFatal(err error) {
+func logErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 
 func (u TeamRepository) GetTeams(db *sqlx.DB) ([]models.Team, error) {
 	rows, err := db.Query("select * from team")
 	teams := []models.Team{}
-	logFatal(err)
+	logErr(err)
 	defer rows.Close()
 	err = sqlx.StructScan(rows, &teams)
 	if err != nil {
@@ -30,7 +30,7 @@ func (u TeamRepository) GetTeams(db *sqlx.DB) ([]models.Team, error) {
 func (u TeamRepository) GetTeamsDone(db *sqlx.DB, done bool) ([]models.Team, error) {
 	rows, err := db.Query("select * from team where done = $1", done)
 	teams := []models.Team{}
-	logFatal(err)
+	logErr(err)
 	defer rows.Close()
 	err = sqlx.StructScan(rows, &teams)
 	if err != nil {
@@ -39,14 +39,14 @@ func (u TeamRepository) GetTeamsDone(db *sqlx.DB, done bool) ([]models.Team, err
 	return teams, nil
 }
 
-func (u TeamRepository) GetTeam(db *sqlx.DB, team models.Team, id int) (models.Team, bool) {
+func (u TeamRepository) GetTeam(db *sqlx.DB, team models.Team, id int) (models.Team, error) {
 	row := db.QueryRowx("select * from team where id_team = $1", id)
 	err := row.StructScan(&team)
 	if err == sql.ErrNoRows {
-		return models.Team{}, false
+		return models.Team{}, err
 	}
-	logFatal(err)
-	return team, true
+	logErr(err)
+	return team, nil
 }
 
 // func (u TeamRepository) GetMyTeams(db *sqlx.DB, team models.Team, id_user int, id_creator int) (models.Team, bool) {
@@ -55,6 +55,6 @@ func (u TeamRepository) GetTeam(db *sqlx.DB, team models.Team, id int) (models.T
 //  	if err == sql.ErrNoRows {
 //  		return models.Team{}, false
 //  	}
-//  	logFatal(err)
+//  	logErr(err)
 //  	return team, true
 // }

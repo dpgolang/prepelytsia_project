@@ -1,0 +1,28 @@
+hash: 63ea2a595d2031375919612259750c5d5b2d984d9cb1403723f9d17c6971dd97
+updated: 2019-07-22T09:22:23.143311576+03:00
+imports:
+- name: github.com/gorilla/handlers
+  version: 415c4810185c26aa35ca0315470d77697000794b
+- name: github.com/gorilla/mux
+  version: 00bdffe0f3c77e27d2cf6f5c70232a2d3e4d9c15
+- name: github.com/gorilla/securecookie
+  version: 86450627d8e6b88e00ea41f228489b89d08a40de
+- name: github.com/gorilla/sessions
+  version: 4355a998706e83fe1d71c31b07af94e34f68d74a
+- name: github.com/jmoiron/sqlx
+  version: d161d7a76b5661016ad0b085869f77fd410f3e6a
+  subpackages:
+  - reflectx
+- name: github.com/lib/pq
+  version: 3427c32cb71afc948325f299f040e53c1dd78979
+  subpackages:
+  - oid
+  - scram
+- name: github.com/subosito/gotenv
+  version: 69b5b6104433beb2cb9c3ce00bdadf3c7c2d3f34
+- name: golang.org/x/crypto
+  version: 4def268fd1a49955bfb3dda92fe3db4f924f2285
+  subpackages:
+  - bcrypt
+  - blowfish
+testImports: []

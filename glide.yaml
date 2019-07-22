@@ -1,0 +1,17 @@
+package: knock-knock
+import:
+- package: github.com/gorilla/handlers
+  version: v1.4.1
+- package: github.com/gorilla/mux
+  version: v1.7.3
+- package: github.com/gorilla/sessions
+  version: v1.2.0
+- package: github.com/jmoiron/sqlx
+  version: v1.2.0
+- package: github.com/lib/pq
+  version: v1.2.0
+- package: github.com/subosito/gotenv
+  version: v1.1.1
+- package: golang.org/x/crypto
+  subpackages:
+  - bcrypt

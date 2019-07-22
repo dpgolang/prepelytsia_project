@@ -1,7 +1,7 @@
 package models
 
 type User struct {
-	Id          int     `json:"id" db:"id_user"`
+	IDuser      int     `json:"id" db:"id_user"`
 	Firstname   string  `json:"firstname,omitempty" db:"firstname"`
 	Lastname    string  `json:"lastname,omitempty" db:"lastname"`
 	Sum         int     `json:"sum" db:"summarymark"`
@@ -12,7 +12,7 @@ type User struct {
 
 type Users []*User
 
-func (u Users) CalculateAvarageMark() { // почему не работает в repository/user/user_psql в getUsers users.CalculateAvarageMark()?
+func (u Users) CalculateAvarageMark() { // считать в бд
 	for _, i := range u {
 		i.CalculateAvarageMark()
 	}

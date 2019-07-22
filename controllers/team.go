@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	_ "database/sql"
+	"database/sql"
 	"encoding/json"
 	_ "fmt"
 	"github.com/gorilla/mux"
@@ -63,21 +63,18 @@ func (c Controller) GetTeams(db *sqlx.DB) http.HandlerFunc {
 			http.Error(w, "You should sign in to check this page", http.StatusForbidden)
 			return
 		}
-		showAllDone, _ := strconv.ParseBool(r.URL.Query().Get("showAllDone"))
-		showAllNotDone, _ := strconv.ParseBool(r.URL.Query().Get("showAllNotDone"))
 		var (
 			err      error
 			teamRepo teamRepository.TeamRepository
 			teams    []models.Team
 		)
-		if showAllDone {
-			teams, err = teamRepo.GetTeamsDone(db, showAllDone)
-		} else if showAllNotDone {
-			teams, err = teamRepo.GetTeamsDone(db, !showAllNotDone)
-		} else {
+		done, err := strconv.ParseBool(r.URL.Query().Get("done"))
+		if err != nil {
 			teams, err = teamRepo.GetTeams(db)
+		} else {
+			teams, err = teamRepo.GetTeamsDone(db, done)
 		}
-		logFatal(err)
+		logErr(err)
 		json.NewEncoder(w).Encode(teams)
 		log.Println(teams)
 	}
@@ -95,12 +92,17 @@ func (c Controller) GetTeam(db *sqlx.DB) http.HandlerFunc {
 		var team models.Team
 		teamRepo := teamRepository.TeamRepository{}
 		id, err := strconv.Atoi(params["id"])
-		logFatal(err)
-		team, teamIsFound := teamRepo.GetTeam(db, team, id)
-		if teamIsFound {
+		logErr(err)
+		team, err = teamRepo.GetTeam(db, team, id)
+		if err == nil {
 			json.NewEncoder(w).Encode(team)
 			return
 		}
-		w.WriteHeader(http.StatusUnauthorized)
+		if err == sql.ErrNoRows {
+			json.NewEncoder(w).Encode("There is no such team!")
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
 	}
+
 }

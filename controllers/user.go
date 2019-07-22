@@ -1,64 +1,62 @@
 package controllers
 
 import (
-	_ "database/sql"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/subosito/gotenv"
+	"github.com/subosito/gotenv"
 	"golang.org/x/crypto/bcrypt"
 	_ "html/template"
 	"knock-knock/models"
 	"knock-knock/repository/user"
 	"log"
 	"net/http"
-	//"os"
+	"os"
 	"regexp"
 	"strconv"
 )
 
-/*func init() {
+func init() {
 	gotenv.Load()
-}*/
+	store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
+}
 
 //var users []models.User
 
 type Controller struct{}
 
-func logFatal(err error) {
+func logErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 
 //куда лучше вставить эту строчку? как подгрузить из env
-var store = sessions.NewCookieStore([]byte("secret-key"))
+var store *sessions.CookieStore
 
 func (c Controller) GetMyPage(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "cookie-name")
 		w.Header().Set("Content-Type", "application/json")
 		userCheckingID := getUserSession(session)
-		var (
-			userIsFound bool
-			user        models.User
-		)
+		var user models.User
 		userRepo := userRepository.UserRepository{}
 		if userCheckingID != 0 {
 			json.NewEncoder(w).Encode(userCheckingID)
-			user, userIsFound = userRepo.GetUser(db, user, userCheckingID)
-			fmt.Println(user)
-			if userIsFound {
+			user, err := userRepo.GetUser(db, user, userCheckingID)
+			if err == nil {
 				json.NewEncoder(w).Encode(user)
 				return
 			}
+			if err == sql.ErrNoRows {
+				json.NewEncoder(w).Encode("There is no such user!")
+				return
+			}
+			http.Error(w, "You should sign in to check this page", http.StatusForbidden)
 		}
-		//	session.Values["authenticated"] = true
-		http.Error(w, "You should sign in to check this page", http.StatusForbidden)
-		//json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d",userChecking.Id))
-		//json.NewEncoder(w).Encode(userChecking.Id)
 	}
 }
 
@@ -81,7 +79,7 @@ func (c Controller) GetUsers(db *sqlx.DB) http.HandlerFunc {
 		//var user models.User
 		userRepo := userRepository.UserRepository{}
 		users, err := userRepo.GetUsers(db)
-		logFatal(err)
+		logErr(err)
 		/*data := struct {
 			Title   string
 			Content []models.User
@@ -108,14 +106,18 @@ func (c Controller) GetUser(db *sqlx.DB) http.HandlerFunc {
 		var user models.User
 		userRepo := userRepository.UserRepository{}
 		id, err := strconv.Atoi(params["id"])
-		logFatal(err)
-		user, userIsFound := userRepo.GetUser(db, user, id)
-		if userIsFound {
+		logErr(err)
+		user, err = userRepo.GetUser(db, user, id)
+		if err == nil {
 			json.NewEncoder(w).Encode(user)
 			return
 		}
+		if err == sql.ErrNoRows {
+			json.NewEncoder(w).Encode("There is no such user!")
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
 
-		w.WriteHeader(http.StatusUnauthorized)
 		/*if user.Id == 0 {
 			data := struct {
 				Title   string
@@ -129,7 +131,7 @@ func (c Controller) GetUser(db *sqlx.DB) http.HandlerFunc {
 			json.NewEncoder(w).Encode(user)
 			return
 		}
-		logFatal(err)
+		logErr(err)
 		data := struct {
 			Title   string
 			Content models.User
@@ -149,15 +151,14 @@ func (c Controller) Signup(db *sqlx.DB) http.HandlerFunc {
 		)
 		w.Header().Set("Content-Type", "application/json")
 		err := json.NewDecoder(r.Body).Decode(&user)
-		logFatal(err)
+		logErr(err)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		nameOK := checkName(user)
-		if nameOK {
+		if checkName(user) {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
-			logFatal(err)
+			logErr(err)
 			user.Password = string(hashedPassword)
 			userRepo := userRepository.UserRepository{}
 			userID = userRepo.Signup(db, user)
@@ -169,9 +170,9 @@ func (c Controller) Signup(db *sqlx.DB) http.HandlerFunc {
 }
 
 func checkName(user models.User) bool {
-	matchedFirstname, err := regexp.MatchString(`^[a-zA-Z0-9_а-яА-Я \-]*$`, user.Firstname)
-	logFatal(err)
-	matchedLastname, err := regexp.MatchString(`^[a-zA-Z0-9_а-яА-Я \-]*$`, user.Lastname)
+	matchedFirstname, err := regexp.MatchString(`^[a-zA-Z0-9_а-яА-Я ]+$`, user.Firstname)
+	logErr(err)
+	matchedLastname, err := regexp.MatchString(`^[a-zA-Z0-9_а-яА-Я ]+$`, user.Lastname)
 	return matchedLastname && matchedFirstname
 }
 
@@ -181,36 +182,37 @@ func (c Controller) Logout() http.HandlerFunc {
 		session.Options.MaxAge = -1
 		err := session.Save(r, w)
 		if err != nil {
-			logFatal(err)
+			logErr(err)
 		}
 
 		json.NewEncoder(w).Encode("logged out!")
 	}
 }
-func (c Controller) Signin(db *sqlx.DB) http.HandlerFunc { //как отлавливать когда айди не найдет
+func (c Controller) Signin(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "cookie-name")
 		session.Options.MaxAge = 300
 		w.Header().Set("Content-Type", "application/json")
 		userFromBase := models.User{}
 		userChecking := models.User{}
-		var userIsFound bool
 		err := json.NewDecoder(r.Body).Decode(&userChecking)
-		logFatal(err)
+		logErr(err)
 		userRepo := userRepository.UserRepository{}
-		userFromBase.Password, userIsFound = userRepo.Signin(db, userChecking, userFromBase)
-		if userIsFound {
+		userFromBase.Password, err = userRepo.Signin(db, userChecking, userFromBase)
+		if err == nil {
 			if err = bcrypt.CompareHashAndPassword([]byte(userFromBase.Password), []byte(userChecking.Password)); err != nil {
-				http.Error(w, "Wrong password!", http.StatusUnauthorized)
+				http.Error(w, "Wrong ID or password!", http.StatusUnauthorized)
 				return
 			}
 			session.Values["authenticated"] = true
-			session.Values["id"] = userChecking.Id
+			session.Values["id"] = userChecking.IDuser
 			session.Save(r, w)
-			json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d", userChecking.Id))
-		} else {
-			http.Error(w, "Wrong ID!", http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d", userChecking.IDuser))
+		}
+		if err == sql.ErrNoRows {
+			http.Error(w, "Wrong ID or password!", http.StatusUnauthorized)
 			return
 		}
+		logErr(err)
 	}
 }
