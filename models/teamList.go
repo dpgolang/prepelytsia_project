@@ -1,15 +1,17 @@
 package models
 
-type Teams map[int]map[int]User
+//type Teams map[int]map[int]User
 
-type TeamList struct {
-	//TeamNumber int    `json:"teamnumber" db:"team_id"`
-	Teammates []User //`json: "teammates" db: "teammates"`
-	TeamName  string //`json: teamname db:"teamname"`
-	Done      bool   //`json: done db: "done"`
-	CreatorID int    //`json: creatorid db: "id_creator"`
-	/*IDelem     int    `json:"id" db:"id_elem"`
-	  IDteam     string `json:"name" db:"id_team"`
-	  IDteammate int    `json:"creator" db:"id_teammate"`
-	  Done       bool   `json:"done" db:"done"`*/
+type TeamMember struct {
+	Team     Team `json:"team,omitempty"`
+	Teammate User `json:"teammate,omitempty" db:"teammate"`
+	UserDone bool `json:"userdone"db:"userdone"`
+}
+type TeamListUser struct {
+	Teammate User `json:"teammate,omitempty" db:"teammate"`
+	UserDone bool `json:"userdone"db:"userdone"`
+}
+type ParsedMember struct {
+	TeamFromList Team           `json:"team"`
+	Teammates    []TeamListUser `json:"teammates"`
 }

@@ -27,19 +27,19 @@ func logErr(err error) {
 // 	return teams, nil
 // }
 
-func (u TeamListRepository) GetTeamList(db *sqlx.DB) ([]models.TeamList, error) {
-	var teams []models.TeamList
-	sql := `SELECT
-      (teammate.*) as teammates,
-      (team.name) as teamname,
-      (team.id_creator) as id_creator,
-      (team.done) as done
-    FROM
-      teamlist
-    INNER JOIN teammate ON teammate.id_user = teamlist.id_teammate
-    INNER JOIN team ON teamlist.id_team = team.id_team`
-	err := db.Select(&teams, sql)
-	return teams, err
+func (u TeamListRepository) GetTeamList(db *sqlx.DB) ([]models.TeamMember, error) {
+	rows, err := db.Query("SELECT team.id_team, team.name, team.done, team.Id_creator, teammate.id_user, teammate.firstname, teammate.lastname,  teamlist.done FROM teamlist INNER JOIN teammate ON teammate.id_user = teamlist.id_teammate INNER JOIN team ON teamlist.id_team = team.id_team ORDER BY teamlist.id_team")
+	logErr(err)
+	defer rows.Close()
+	teamList := []models.TeamMember{}
+	for rows.Next() {
+		m := models.TeamMember{}
+		if err := rows.Scan(&m.Team.IDteam, &m.Team.Name, &m.Team.Done, &m.Team.IDcreator, &m.Teammate.IDuser, &m.Teammate.Firstname, &m.Teammate.Lastname, &m.UserDone); err != nil {
+			logErr(err)
+		}
+		teamList = append(teamList, m)
+	}
+	return teamList, err
 }
 
 // func (u TeamRepository) GetTeam(db *sqlx.DB, team models.Team, id int) (models.Team, error) {
