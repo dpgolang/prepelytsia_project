@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"database/sql"
+	//"database/sql"
 	"encoding/json"
 	_ "fmt"
 	"github.com/gorilla/mux"
@@ -11,49 +11,13 @@ import (
 	_ "golang.org/x/crypto/bcrypt"
 	_ "html/template"
 	"knock-knock/models"
-	"knock-knock/repository/team"
+	//"knock-knock/repository/team"
 	"log"
 	"net/http"
 	//"os"
 	_ "regexp"
 	"strconv"
 )
-
-// func (c Controller) GetMyTeams(db *sqlx.DB) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		session, _ := store.Get(r, "cookie-name")
-// 		session.Options.MaxAge = 300
-// 		w.Header().Set("Content-Type", "application/json")
-// 		userCheckingID := getUserSession(session)
-// 		var userIsFound bool
-// 		var team models.Team
-// 		//fmt.Println("aaa")
-
-// 		//fmt.Println(userCheckingID.(int))
-// 		userRepo := userRepository.UserRepository{}
-// 		if userCheckingID != 0 {
-// 			json.NewEncoder(w).Encode(userCheckingID)
-// 			team, userIsFound = userRepo.GetUser(db, team, userCheckingID)
-// 			fmt.Println(team)
-// 			if userIsFound {
-// 				json.NewEncoder(w).Encode(team)
-// 				return
-// 			}
-// 		}
-// 		//	session.Values["authenticated"] = true
-// 		http.Error(w, "You should sign in to check this page", http.StatusForbidden)
-// 		//json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d",userChecking.Id))
-// 		//json.NewEncoder(w).Encode(userChecking.Id)
-// 	}
-// }
-
-// func getUserSession(s *sessions.Session) int {
-// 	userID, ok := s.Values["id"].(int)
-// 	if !ok {
-// 		return 0
-// 	}
-// 	return userID
-// }
 
 func (c Controller) GetTeams(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -64,18 +28,23 @@ func (c Controller) GetTeams(db *sqlx.DB) http.HandlerFunc {
 			return
 		}
 		var (
-			err      error
-			teamRepo teamRepository.TeamRepository
-			teams    []models.Team
+			err   error
+			teams []*models.Team
 		)
 		done, err := strconv.ParseBool(r.URL.Query().Get("done"))
 		if err != nil {
-			teams, err = teamRepo.GetTeams(db)
+			teams = models.GetTeams()
 		} else {
-			teams, err = teamRepo.GetTeamsDone(db, done)
+			teams = models.GetDoneTeams(done)
 		}
+
+		teamsShow := []models.TeamShow{}
+		for _, t := range teams {
+			teamsShow = append(teamsShow, t.ToTeamShow())
+		}
+
 		logErr(err)
-		json.NewEncoder(w).Encode(teams)
+		json.NewEncoder(w).Encode(teamsShow)
 		log.Println(teams)
 	}
 }
@@ -89,20 +58,14 @@ func (c Controller) GetTeam(db *sqlx.DB) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		params := mux.Vars(r)
-		var team models.Team
-		teamRepo := teamRepository.TeamRepository{}
 		id, err := strconv.Atoi(params["id"])
 		logErr(err)
-		team, err = teamRepo.GetTeam(db, team, id)
-		if err == nil {
-			json.NewEncoder(w).Encode(team)
+		team := models.GetTeam(id)
+		if team != nil {
+			json.NewEncoder(w).Encode(team.ToTeamShow())
 			return
 		}
-		if err == sql.ErrNoRows {
-			json.NewEncoder(w).Encode("There is no such team!")
-			return
-		}
+		json.NewEncoder(w).Encode("There is no such team!")
 		w.WriteHeader(http.StatusNotFound)
 	}
-
 }

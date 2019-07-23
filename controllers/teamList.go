@@ -11,10 +11,10 @@ import (
 	_ "golang.org/x/crypto/bcrypt"
 	_ "html/template"
 	"knock-knock/models"
-	"knock-knock/repository/teamList"
+	//	"knock-knock/repository/teamList"
 	"net/http"
 	//"os"
-	"log"
+	//	"log"
 	_ "regexp"
 	_ "strconv"
 )
@@ -28,41 +28,35 @@ func (c Controller) GetTeamList(db *sqlx.DB) http.HandlerFunc {
 				http.Error(w, "You should sign in to check this page", http.StatusForbidden)
 				return
 			}*/
-		var (
-			err          error
-			teamListRepo teamListRepository.TeamListRepository
-			listMember   []models.TeamMember
-			parsedList   []models.ParsedMember
-		)
-		listMember, err = teamListRepo.GetTeamList(db)
-		//teams, err = teamRepo.GetTeamsDone(db, done)
-		logErr(err)
-		parsedList = parseList(listMember)
-		json.NewEncoder(w).Encode(parsedList)
-		//log.Println(parsedList)
+
+		teams := []models.TeamShow{}
+		for _, t := range models.GetTeams() {
+			teams = append(teams, t.ToTeamShow())
+		}
+		json.NewEncoder(w).Encode(teams)
 	}
 }
 
-func parseList(list []models.TeamMember) []models.ParsedMember {
-	var (
-		parsedList []models.ParsedMember
-		//parsedListUnit models.ParsedMember
-		user  models.TeamListUser
-		users []models.TeamListUser
-		//team           []models.Team
-	)
-	for i := 0; i < len(list); i++ {
-		user.Teammate = list[i].Teammate
-		user.UserDone = list[i].UserDone
-		users = append(users, user)
-		if i+1 < len(list) && list[i].Team.IDteam != list[i+1].Team.IDteam {
-			parsedListUnit := models.ParsedMember{}
-			parsedListUnit.TeamFromList = list[i].Team
-			parsedListUnit.Teammates = users
-			parsedList = append(parsedList, parsedListUnit)
-			users = []models.TeamListUser{}
-		}
-	}
-	log.Println(len(list))
-	return parsedList
-}
+// func parseList(list []models.TeamMember) []models.ParsedMember {
+// 	var (
+// 		parsedList []models.ParsedMember
+// 		//parsedListUnit models.ParsedMember
+// 		user  models.TeamListUser
+// 		users []models.TeamListUser
+// 		//team           []models.Team
+// 	)
+// 	for i := 0; i < len(list); i++ {
+// 		user.Teammate = list[i].Teammate
+// 		user.UserDone = list[i].UserDone
+// 		users = append(users, user)
+// 		if i+1 < len(list) && list[i].Team.IDteam != list[i+1].Team.IDteam {
+// 			parsedListUnit := models.ParsedMember{}
+// 			parsedListUnit.TeamFromList = list[i].Team
+// 			parsedListUnit.Teammates = users
+// 			parsedList = append(parsedList, parsedListUnit)
+// 			users = []models.TeamListUser{}
+// 		}
+// 	}
+// 	log.Println(len(list))
+// 	return parsedList
+// }

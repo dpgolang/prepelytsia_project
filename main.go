@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"knock-knock/controllers"
 	"knock-knock/driver"
-	_ "knock-knock/models"
+	"knock-knock/modelLoading"
 	"log"
 	"net/http"
 	"os"
@@ -29,6 +30,13 @@ func main() {
 	controller := controllers.Controller{}
 	db = driver.ConnectDB()
 	router := mux.NewRouter()
+
+	modelLoading.LoadUsers(db)
+	modelLoading.LoadTeams(db)
+	modelLoading.LoadMarks(db)
+
+	log.Println("Users and Teams are loaded")
+
 	router.HandleFunc("/signup", controller.Signup(db)).Methods("POST")
 	router.HandleFunc("/signin", controller.Signin(db)).Methods("POST")
 	router.HandleFunc("/users", controller.GetUsers(db)).Methods("GET")

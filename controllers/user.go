@@ -10,8 +10,8 @@ import (
 	"github.com/subosito/gotenv"
 	"golang.org/x/crypto/bcrypt"
 	_ "html/template"
+	"knock-knock/modelLoading"
 	"knock-knock/models"
-	"knock-knock/repository/user"
 	"log"
 	"net/http"
 	"os"
@@ -42,19 +42,14 @@ func (c Controller) GetMyPage(db *sqlx.DB) http.HandlerFunc {
 		session, _ := store.Get(r, "cookie-name")
 		w.Header().Set("Content-Type", "application/json")
 		userCheckingID := getUserSession(session)
-		var user models.User
-		userRepo := userRepository.UserRepository{}
 		if userCheckingID != 0 {
 			json.NewEncoder(w).Encode(userCheckingID)
-			user, err := userRepo.GetUser(db, user, userCheckingID)
-			if err == nil {
-				json.NewEncoder(w).Encode(user)
+			user := models.GetUser(userCheckingID)
+			if user != nil {
+				json.NewEncoder(w).Encode(user.ToUserShow())
 				return
 			}
-			if err == sql.ErrNoRows {
-				json.NewEncoder(w).Encode("There is no such user!")
-				return
-			}
+			json.NewEncoder(w).Encode("There is no such user!")
 			http.Error(w, "You should sign in to check this page", http.StatusForbidden)
 		}
 	}
@@ -77,9 +72,11 @@ func (c Controller) GetUsers(db *sqlx.DB) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		//var user models.User
-		userRepo := userRepository.UserRepository{}
-		users, err := userRepo.GetUsers(db)
-		logErr(err)
+		users := models.GetUsers()
+		usersShow := []models.UserShow{}
+		for _, user := range users {
+			usersShow = append(usersShow, user.ToUserShow())
+		}
 		/*data := struct {
 			Title   string
 			Content []models.User
@@ -89,7 +86,7 @@ func (c Controller) GetUsers(db *sqlx.DB) http.HandlerFunc {
 		}
 		tmpl, _ := template.ParseFiles("templates/users.html")
 		tmpl.Execute(w, data)*/
-		json.NewEncoder(w).Encode(users)
+		json.NewEncoder(w).Encode(usersShow)
 	}
 }
 
@@ -103,19 +100,15 @@ func (c Controller) GetUser(db *sqlx.DB) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		params := mux.Vars(r)
-		var user models.User
-		userRepo := userRepository.UserRepository{}
+
 		id, err := strconv.Atoi(params["id"])
 		logErr(err)
-		user, err = userRepo.GetUser(db, user, id)
-		if err == nil {
-			json.NewEncoder(w).Encode(user)
+		user := models.GetUser(id)
+		if user != nil {
+			json.NewEncoder(w).Encode(user.ToUserShow())
 			return
 		}
-		if err == sql.ErrNoRows {
-			json.NewEncoder(w).Encode("There is no such user!")
-			return
-		}
+		json.NewEncoder(w).Encode("There is no such user!")
 		w.WriteHeader(http.StatusNotFound)
 
 		/*if user.Id == 0 {
@@ -160,8 +153,7 @@ func (c Controller) Signup(db *sqlx.DB) http.HandlerFunc {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
 			logErr(err)
 			user.Password = string(hashedPassword)
-			userRepo := userRepository.UserRepository{}
-			userID = userRepo.Signup(db, user)
+			userID = modelLoading.Signup(db, user)
 			json.NewEncoder(w).Encode(&userID)
 			return
 		}
@@ -197,17 +189,16 @@ func (c Controller) Signin(db *sqlx.DB) http.HandlerFunc {
 		userChecking := models.User{}
 		err := json.NewDecoder(r.Body).Decode(&userChecking)
 		logErr(err)
-		userRepo := userRepository.UserRepository{}
-		userFromBase.Password, err = userRepo.Signin(db, userChecking, userFromBase)
+		userFromBase.Password, err = modelLoading.Signin(db, userChecking, userFromBase)
 		if err == nil {
 			if err = bcrypt.CompareHashAndPassword([]byte(userFromBase.Password), []byte(userChecking.Password)); err != nil {
 				http.Error(w, "Wrong ID or password!", http.StatusUnauthorized)
 				return
 			}
 			session.Values["authenticated"] = true
-			session.Values["id"] = userChecking.IDuser
+			session.Values["id"] = userChecking.ID
 			session.Save(r, w)
-			json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d", userChecking.IDuser))
+			json.NewEncoder(w).Encode(fmt.Sprintf("logged in, id: %d", userChecking.ID))
 		}
 		if err == sql.ErrNoRows {
 			http.Error(w, "Wrong ID or password!", http.StatusUnauthorized)
