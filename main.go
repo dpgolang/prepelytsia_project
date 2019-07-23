@@ -38,6 +38,7 @@ func main() {
 	router.HandleFunc("/teams", controller.GetTeams(db)).Methods("GET")
 	//router.HandleFunc("/teams/", controller.GetTeams(db)).Methods("GET")
 	router.HandleFunc("/teams/{id}", controller.GetTeam(db)).Methods("GET")
+	router.HandleFunc("/teamList", controller.GetTeamList(db)).Methods("GET")
 
 	fmt.Println("Server is listening...")
 

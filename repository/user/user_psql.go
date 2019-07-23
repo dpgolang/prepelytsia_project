@@ -16,7 +16,7 @@ func logErr(err error) {
 }
 
 func (u UserRepository) GetUsers(db *sqlx.DB) ([]models.User, error) {
-	rows, err := db.Query("select id_user, firstname, lastname, summarymark, teamcount  from teammate")
+	rows, err := db.Query("select id_user, firstname, lastname, summarymark, teamcount, CASE WHEN teamcount>0 THEN (summarymark::decimal /teamcount) ELSE 0 END AS avaragemark from teammate")
 	users := []models.User{}
 	logErr(err)
 	defer rows.Close()
@@ -25,9 +25,9 @@ func (u UserRepository) GetUsers(db *sqlx.DB) ([]models.User, error) {
 		return []models.User{}, err
 	}
 	//users.CalculateAvarageMark()
-	for i := range users {
-		users[i].CalculateAvarageMark()
-	}
+	// for i := range users {
+	// 	users[i].CalculateAvarageMark()
+	// }
 	return users, nil
 }
 
